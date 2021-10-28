@@ -1,7 +1,7 @@
 export default async (req, res) => {
   try {
     const body = req.body;
-    const strapiService = req.scope.resolve("strapiService")
+    const strapiService = req.scope.resolve("strapiService");
 
     // find Strapi entry type from body of webhook
     const strapiType = body.type
@@ -11,11 +11,11 @@ export default async (req, res) => {
     let updated = {}
     switch (strapiType) {
       case "product":
-        entryId = body.data.product_id;
-        updated = await strapiService.sendStrapiProductToAdmin(body.data, entryId)
+        entryId = body.data.medusa_id;
+        updated = await strapiService.sendStrapiProductToAdmin(body.data, entryId);
         break;
       case "productVariant":
-        entryId = body.data.product_variant_id;
+        entryId = body.data.medusa_id;
         updated = await strapiService.sendStrapiProductVariantToAdmin(body.data, entryId)
         break;
       default:
