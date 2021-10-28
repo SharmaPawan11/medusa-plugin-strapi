@@ -11,4 +11,10 @@ src
 .babelrc
 .prettierrc
 .idea
+/strapi-medusa/build/
+/strapi-medusa/.cache/
+/strapi-medusa/utils/setup-postgres-db.sh
+/strapi-medusa/utils/recreate-postgres-db.sh
+/strapi-medusa/utils/recreate-medusa-db.sh
+/strapi-medusa/.tmp/
 
