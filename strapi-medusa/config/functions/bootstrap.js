@@ -181,14 +181,14 @@ module.exports = async () => {
     if (firstRun) {
       strapi.log.debug('First run detected! Synchronizing database with Medusa. Please Wait...');
       const isSynced = await strapi.config.functions['sync']();
-      // if (isSynced) {
-      //   const pluginStore = strapi.store({
-      //     environment: strapi.config.environment,
-      //     type: "type",
-      //     name: "setup"
-      //   });
-      //   await pluginStore.set({ key: "syncHasRun", value: true });
-      // }
+      if (isSynced) {
+        const pluginStore = strapi.store({
+          environment: strapi.config.environment,
+          type: "type",
+          name: "setup"
+        });
+        await pluginStore.set({ key: "syncHasRun", value: true });
+      }
     }
 
   } catch (e) {
