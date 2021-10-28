@@ -1,8 +1,7 @@
 import { BaseService } from "medusa-interfaces"
 import axios from "axios"
-import {response} from "express";
 
-const IGNORE_THRESHOLD = 2 // seconds
+const IGNORE_THRESHOLD = 3 // seconds
 
 class StrapiService extends BaseService {
   constructor(
@@ -47,12 +46,25 @@ class StrapiService extends BaseService {
     this.redis_ = redisClient
   }
 
+  isEmptyObject(obj) {
+    for (let i in obj) return false;
+    return true;
+  }
+
+
   createClient() {
     const client = axios.create({
       baseURL: process.env.STRAPI_URL || "http://localhost:1337",
     })
 
     return client
+  }
+
+  async getAllKeys() {
+    const keys = await this.redis_.keys('prod');
+    keys.forEach((key) => {
+      console.log(key);
+    });
   }
 
   async addIgnore_(id, side) {
@@ -89,7 +101,7 @@ class StrapiService extends BaseService {
       product.images
         .filter((image) => image.url !== product.thumbnail)
         .map(async (image, i) => {
-          const result = await this.createEntryInStrapi('images', {
+          const result = await this.createEntryInStrapi('images', product.id, {
           image_id: image.id,
           url: image.url,
           metadata: image.metadata || {}
@@ -124,29 +136,39 @@ class StrapiService extends BaseService {
     try {
       const product = await this.productService_.retrieve(productId, {
         relations: [
-          "variants",
           "options",
-          "tags",
+          "variants",
+          "variants.prices",
+          "variants.options",
           "type",
           "collection",
+          "tags",
           "images",
         ],
+        select: [
+          "id",
+          "title",
+          "subtitle",
+          "description",
+          "handle",
+          "is_giftcard",
+          "discountable",
+          "thumbnail",
+          "weight",
+          "length",
+          "height",
+          "width",
+          "hs_code",
+          "origin_country",
+          "mid_code",
+          "material",
+          "metadata",
+        ]
       })
 
-      // update or create all variants for the product
-      const variantEntries = await this.getVariantEntries_(product.variants);
-      const strapiProductVariants = [];
-      variantEntries.forEach((entry) => {
-        strapiProductVariants.push({ id: entry.id });
-      });
-
-      delete product.variants;
-      product.product_variants = strapiProductVariants;
-
-      const fields = await this.generateStrapiProductPayload(product);
-
-      // create product in Strapi with product id and fields object
-      return await this.createEntryInStrapi("products", fields);
+      if (product) {
+        return await this.createEntryInStrapi('products', productId, product);
+      }
 
     } catch (error) {
       throw error
@@ -154,7 +176,6 @@ class StrapiService extends BaseService {
   }
 
   async createProductVariantInStrapi(variantId) {
-    console.log(variantId);
     const hasType = await this.getType("product-variants")
       .then(() => true)
       .catch(() => false)
@@ -173,17 +194,15 @@ class StrapiService extends BaseService {
       })
 
       // console.log(variant);
-
-      // create variant in Strapi with variant id and variant properties
-      const fields = this.generateStrapiProductVariantPayload(variant);
-      return await this.createEntryInStrapi('product-variants', fields);
+      if (variant) {
+        return await this.createEntryInStrapi('product-variants', variantId, variant);
+      }
     } catch (error) {
       throw error
     }
   }
 
   async createRegionInStrapi(regionId) {
-    // console.log(regionId);
     const hasType = await this.getType("regions")
       .then(() => true)
       .catch(() => false)
@@ -194,16 +213,13 @@ class StrapiService extends BaseService {
 
     try {
       const region = await this.regionService_.retrieve(regionId, {
-        relations: ["countries", "payment_providers", "fulfillment_providers"],
-      })
+        relations: ["countries", "payment_providers", "fulfillment_providers", "currency"],
+        select: ["id", "name", "tax_rate", "tax_code", "metadata"]
+      });
 
       // console.log(region)
 
-      // initiate the fields for the region in Strapi
-      const fields = this.generateStrapiRegionPayload(region);
-
-      // create the region in Strapi with region id and fields object
-      return await this.createEntryInStrapi('regions', fields)
+      return await this.createEntryInStrapi('regions', regionId, region);
     } catch (error) {
       throw error
     }
@@ -244,25 +260,17 @@ class StrapiService extends BaseService {
       }
 
       const region = await this.regionService_.retrieve(data.id, {
-        relations: ["countries", "payment_providers", "fulfillment_providers"],
-      })
+        relations: ["countries", "payment_providers", "fulfillment_providers", "currency"],
+        select: ["id", "name", "tax_rate", "tax_code", "metadata"]
+      });
+      // console.log(region);
 
-      let hasRegionEntry = false;
-      try {
-        // fetch from Strapi
-        hasRegionEntry = await this.doesEntryExistInStrapi('regions', region.id);
-      } catch (error) {
-        return this.createRegionInStrapi(region.id);
+      if (region) {
+        // Update entry in Strapi
+        const response = await this.updateEntryInStrapi('regions', region.id, region);
+        console.log('Region Strapi Id - ', response);
       }
 
-      if (hasRegionEntry) {
-        const fields = this.generateStrapiRegionPayload(region);
-        // update entry in Strapi
-        const response = await this.updateEntryInStrapi('regions', fields.region_id, fields);
-        // console.log('Final Response after update', response);
-      }
-
-      await this.addIgnore_(data.id, "medusa-strapi")
       return region;
     } catch (error) {
       throw error
@@ -270,6 +278,19 @@ class StrapiService extends BaseService {
   }
 
   async updateProductInStrapi(data) {
+    const hasType = await this.getType("products")
+        .then((res) => {
+          // console.log(res.data);
+          return true;
+        })
+        .catch((error) => {
+          // console.log(error.response.status);
+          return false;
+        })
+    if (!hasType) {
+      return Promise.resolve()
+    }
+
     // console.log(data);
     const updateFields = [
       "variants",
@@ -292,8 +313,10 @@ class StrapiService extends BaseService {
     }
 
     try {
+      await this.getAllKeys();
       const ignore = await this.shouldIgnore_(data.id, "strapi")
       if (ignore) {
+        console.log('Strapi has just updated this product which triggered this function. IGNORING... ')
         return Promise.resolve()
       }
 
@@ -301,39 +324,37 @@ class StrapiService extends BaseService {
         relations: [
           "options",
           "variants",
+          "variants.prices",
+          "variants.options",
           "type",
           "collection",
           "tags",
           "images",
         ],
-      })
+        select: [
+          "id",
+          "title",
+          "subtitle",
+          "description",
+          "handle",
+          "is_giftcard",
+          "discountable",
+          "thumbnail",
+          "weight",
+          "length",
+          "height",
+          "width",
+          "hs_code",
+          "origin_country",
+          "mid_code",
+          "material",
+          "metadata",
+        ]
+      });
 
-      // console.log(product);
-
-      // check if product exists
-      let hasProductEntry = false;
-      try {
-        // fetch entry in Strapi
-        hasProductEntry = await this.doesEntryExistInStrapi('products', product.id);
-      } catch (error) {
-        return this.createProductInStrapi(product)
+      if (product) {
+        const response = await this.updateEntryInStrapi('products', product.id, product);
       }
-
-      if (hasProductEntry) {
-        const variantEntries = await this.getVariantEntries_(product.variants);
-        const strapiProductVariants = [];
-        variantEntries.forEach((entry) => {
-          strapiProductVariants.push({ id: entry.id });
-        });
-
-        delete product.variants;
-        product.product_variants = strapiProductVariants;
-
-        const fields = await this.generateStrapiProductPayload(product);
-        const response = await this.updateEntryInStrapi('products', fields.product_id, fields);
-        console.log(response);
-      }
-      await this.addIgnore_(data.id, "medusa-strapi")
 
       return product;
     } catch (error) {
@@ -342,6 +363,19 @@ class StrapiService extends BaseService {
   }
 
   async updateProductVariantInStrapi(data) {
+
+    const hasType = await this.getType("product-variants")
+      .then((res) => {
+        // console.log(res.data);
+        return true;
+      })
+      .catch((error) => {
+        // console.log(error.response.status);
+        return false;
+      })
+    if (!hasType) {
+      return Promise.resolve()
+    }
 
     const updateFields = [
       "title",
@@ -374,29 +408,15 @@ class StrapiService extends BaseService {
       const variant = await this.productVariantService_.retrieve(data.id, {
         relations: ["prices", "options"],
       });
+      console.log(variant);
 
-      // check if variant exists
-      let hasVariantEntry = false;
-      // if not, we create a new one
-      try {
-        // fetch variant in Strapi
-        hasVariantEntry = await this.doesEntryExistInStrapi('product-variants', data.id);
-      } catch (error) {
-        // if we fail to find the variant, we create it
-        return this.createProductVariantInStrapi(data.id);
+      if (variant) {
+        // Update entry in Strapi
+        const response = await this.updateEntryInStrapi('product-variants', variant.id, variant);
+        console.log('Variant Strapi Id - ', response);
       }
 
-      if (hasVariantEntry) {
-        // previous fields and new fields
-        const fields = this.generateStrapiProductVariantPayload(variant);
-        // update entry in Strapi
-        const response = await this.updateEntryInStrapi('product-variants', fields.product_variant_id, fields);
-        await this.addIgnore_(variant.id, "medusa-strapi")
-        // console.log('Successfully Updated Product Variant', response);
-        return response;
-
-      }
-
+      return variant;
     } catch (error) {
       console.log('Failed to update product variant', data.id);
       throw error
@@ -414,6 +434,11 @@ class StrapiService extends BaseService {
       return Promise.resolve()
     }
 
+    const ignore = await this.shouldIgnore_(data.id, "strapi")
+    if (ignore) {
+      return Promise.resolve()
+    }
+
     return await this.deleteEntryInStrapi("products", data.id);
   }
 
@@ -428,6 +453,11 @@ class StrapiService extends BaseService {
       return Promise.resolve()
     }
 
+    const ignore = await this.shouldIgnore_(data.id, "strapi")
+    if (ignore) {
+      return Promise.resolve()
+    }
+
     return await this.deleteEntryInStrapi("product-variants", data.id);
   }
 
@@ -438,8 +468,10 @@ class StrapiService extends BaseService {
 
   // Buggy - Don't uncomment lifecycle hooks in product in strapi else infinite requests.
   async sendStrapiProductToAdmin(productEntry, productId) {
-    const ignore = await this.shouldIgnore_(productId, "medusa-strapi")
+    await this.getAllKeys();
+    const ignore = await this.shouldIgnore_(productId, "medusa")
     if (ignore) {
+      console.log('Medusa has just updated this product which triggered this function. IGNORING... ');
       return
     }
 
@@ -448,14 +480,14 @@ class StrapiService extends BaseService {
       // const productEntry = null
 
       const product = await this.productService_.retrieve(productId);
-      console.log(product);
 
       let update = {}
 
       // update Medusa product with Strapi product fields
-      const title = ""
-      const subtitle = ""
-      const description = ""
+      const title = productEntry.title;
+      const subtitle = productEntry.subtitle;
+      const description = productEntry.description;
+      const handle = productEntry.handle;
 
       if (product.title !== title) {
         update.title = title
@@ -469,49 +501,59 @@ class StrapiService extends BaseService {
         update.description = description
       }
 
+      if (product.handle !== handle) {
+        update.handle = handle
+      }
+
       // Get the thumbnail, if present
       if (productEntry.thumbnail) {
         const thumb = null
         update.thumbnail = thumb;
       }
 
-      await this.productService_.update(productId, update).then(async () => {
-        return await this.addIgnore_(productId, "strapi")
-      })
-      // if (!_.isEmpty(update)) {
-      //
-      // }
+      if (!this.isEmptyObject(update)) {
+        await this.productService_.update(productId, update).then(async () => {
+          return await this.addIgnore_(productId, "strapi")
+        })
+      }
     } catch (error) {
       throw error
     }
   }
 
-  // Yet to be implemented
-  async sendStrapiProductVariantToAdmin(variantId) {
-    const ignore = this.shouldIgnore_(variantId, "medusa-strapi")
+  async sendStrapiProductVariantToAdmin(variantEntry, variantId) {
+    const ignore = await this.shouldIgnore_(variantId, "medusa");
     if (ignore) {
       return
     }
 
     try {
-      // get entry from Strapi
-      const variantEntry = null
 
-      const updatedVariant = await this.productVariantService_
-        .update(variantId, {
-          title: "", // update variant title in Medusa
-        })
-        .then(async () => {
-          return await this.addIgnore_(variantId, "strapi")
-        })
+      const variant = await this.productVariantService_.retrieve(variantId);
+      let update = {}
 
-      return updatedVariant
+      if (variant.title !== variantEntry.title) {
+        update.title = variantEntry.title
+      }
+
+      if (!this.isEmptyObject(update)) {
+        const updatedVariant = await this.productVariantService_
+            .update(variantId, update)
+            .then(async () => {
+              return await this.addIgnore_(variantId, "strapi")
+            })
+
+        return updatedVariant
+      }
     } catch (error) {
       throw error
     }
   }
 
   async getType(type) {
+    if (!this.strapiAuthToken) {
+      await this.loginToStrapi();
+    }
     const config = {
       method: 'get',
       url: `http://localhost:1337/${type}`,
@@ -528,6 +570,7 @@ class StrapiService extends BaseService {
       method: 'head',
       url: `http://localhost:1337/_health`
     };
+    console.log('Checking strapi Health');
     return axios(config).then((res) => {
       if (res.status === 204) {
         console.log('\n Strapi Health Check OK \n');
@@ -564,18 +607,21 @@ class StrapiService extends BaseService {
     })
   }
 
-  async retryOnceOnTokenExpire(error, type, data) {
+  async retryOnceOnTokenExpire(error, type, id, data) {
     if (error.response.status === 403 || error.response.status === 401) {
       console.log('Authentication error');
       const tokenRefreshed = await this.loginToStrapi();
       if (tokenRefreshed) {
         this.retryCount++;
-        return this.createEntryInStrapi(type, data);
+        return this.createEntryInStrapi(type, id, data);
       }
     }
   }
 
-  async createEntryInStrapi(type, data) {
+  async createEntryInStrapi(type, id, data) {
+    if (!this.strapiAuthToken) {
+      await this.loginToStrapi();
+    }
     const config = {
       method: 'post',
       url: `http://localhost:1337/${type}`,
@@ -586,6 +632,7 @@ class StrapiService extends BaseService {
     };
     return axios(config).then((res) => {
       if (res.data.result) {
+        this.addIgnore_(id, "medusa");
         this.retryCount = 0;
         return res.data.data
       }
@@ -593,7 +640,7 @@ class StrapiService extends BaseService {
     }).catch(async (error) => {
       if (error && error.response && error.response.status) {
         if (this.retryCount === 0) {
-          return await this.retryOnceOnTokenExpire(error, type, data);
+          return await this.retryOnceOnTokenExpire(error, type, id, data);
         }
         throw new Error("Error while trying to create entry in strapi - " + type);
       }
@@ -601,6 +648,9 @@ class StrapiService extends BaseService {
   }
 
   async updateEntryInStrapi(type, id, data) {
+    if (!this.strapiAuthToken) {
+      await this.loginToStrapi();
+    }
     const config = {
       method: 'put',
       url: `http://localhost:1337/${type}/${id}`,
@@ -611,6 +661,7 @@ class StrapiService extends BaseService {
     };
     return axios(config).then((res) => {
       if (res.data.result) {
+        this.addIgnore_(id, "medusa");
         return res.data.data
       }
       return null;
@@ -625,6 +676,9 @@ class StrapiService extends BaseService {
   }
 
   async deleteEntryInStrapi(type, id) {
+    if (!this.strapiAuthToken) {
+      await this.loginToStrapi();
+    }
     const config = {
       method: 'delete',
       url: `http://localhost:1337/${type}/${id}`,
@@ -648,6 +702,9 @@ class StrapiService extends BaseService {
   }
 
   async doesEntryExistInStrapi(type, id) {
+    if (!this.strapiAuthToken) {
+      await this.loginToStrapi();
+    }
     const config = {
       method: 'get',
       url: `http://localhost:1337/${type}/${id}`,
@@ -663,121 +720,6 @@ class StrapiService extends BaseService {
       throw new Error("Given entry doesn't exist in Strapi");
     })
   }
-
-  generateStrapiRegionPayload(region) {
-    return {
-      region_id: region.id,
-      name: region.name,
-      currency: region.currency_code,
-      tax_rate: region.tax_rate,
-      tax_code: region.tax_code,
-      metadata: region.metadata || {},
-      countries: region.countries,
-      fulfillment_providers: region.fulfillment_providers.map((provider) => {
-        return { fulfillment_provider_id: provider.id, is_installed: provider.is_installed }
-      }),
-      payment_providers: region.payment_providers.map((provider) => {
-        return { payment_provider_id: provider.id, is_installed: provider.is_installed }
-      })
-
-    }
-  }
-
-  generateStrapiProductVariantPayload(productVariant) {
-    return {
-      product_variant_id: productVariant.id,
-      title: productVariant.title,
-      product: productVariant.product_id,
-      money_amounts: productVariant.prices.map(({id, ...money_amount}) => {
-        return { ...money_amount, money_amount_id: id }
-      }),
-      product_option_values: productVariant.options.map(({id, ...product_option_value}) => {
-        return { ...product_option_value, product_option_value_id: id }
-      }),
-      sku: productVariant.sku,
-      barcode: productVariant.barcode,
-      ean: productVariant.ean,
-      upc: productVariant.upc,
-      variant_rank: productVariant.variant_rank,
-      inventory_quantity: productVariant.inventory_quantity,
-      allow_backorder: productVariant.allow_backorder,
-      manage_inventory: productVariant.manage_inventory,
-      hs_code: productVariant.hs_code,
-      origin_country: productVariant.origin_country,
-      mid_code: productVariant.mid_code,
-      material: productVariant.material,
-      weight: productVariant.weight,
-      product_variant_length: productVariant.length,
-      height: productVariant.height,
-      width: productVariant.width,
-      metadata: productVariant.metadata || {},
-    }
-  }
-
-  async generateStrapiProductPayload(product) {
-    const fields = {
-      product_id: product.id,
-      title: product.title,
-      subtitle: product.subtitle,
-      description: product.description,
-      handle: product.handle,
-      is_giftcard: product.is_giftcard,
-      status: product.status,
-      thumbnail: product.thumbnail,
-      weight: product.weight,
-      height: product.height,
-      width: product.width,
-      product_length: product.length,
-      hs_code: product.hs_code,
-      origin_country: product.origin_country,
-      mid_code: product.mid_code,
-      material: product.material,
-      discountable: product.discountable,
-      metadata: product.metadata || {},
-      product_variants: product.product_variants
-    };
-
-    // Ignore 'id' field from each "many-to-one" reference (type and collection)
-    if (product.type) {
-      const { 'id': typeId, ...type } = product.type;
-      fields.type = { ...type, product_type_id: typeId }
-    }
-
-    if (product.collection) {
-      const { 'id': collectionId, ...collection } = product.collection;
-      fields.collection = { ...collection, product_collection_id: collectionId }
-    }
-
-    // profile comes undefined for some reason.
-    fields.shipping_profile_id = product.profile_id;
-
-    if (product.tags) {
-      fields.tags = product.tags.map(({id, ...tag}) => {
-        return {...tag, product_tag_id: id}
-      })
-    }
-
-    if (product.options) {
-      fields.options = product.options.map(({id, ...option}) => {
-        return {...option, product_option_id: id}
-      })
-    }
-
-    // add images to Strapi product
-    if (product.images.length > 0) {
-      const images = await this.createImageAssets(product);
-      const strapiProductImages = [];
-      images.forEach((image) => {
-        strapiProductImages.push({ image: image.id });
-      });
-      fields.images = strapiProductImages;
-    }
-
-
-    return fields;
-  }
-
-
 
 }
 

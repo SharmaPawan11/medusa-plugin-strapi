@@ -13,5 +13,11 @@ export default (app) => {
     middlewares.wrap(require("./strapi").default)
   )
 
+  route.post(
+      "/seed",
+      bodyParser.json(),
+      middlewares.wrap(require("./seed").default)
+  )
+
   return app
 }

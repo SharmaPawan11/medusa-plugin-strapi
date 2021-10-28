@@ -28,7 +28,6 @@ class StrapiSubscriber {
     })
 
     this.eventBus_.subscribe("product.updated", async (data) => {
-      console.log(data);
       await this.strapiService_.updateProductInStrapi(data)
     })
 

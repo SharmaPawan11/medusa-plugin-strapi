@@ -1,6 +1,5 @@
 export default async (req, res) => {
   try {
-    console.log(req.body);
     const body = req.body;
     const strapiService = req.scope.resolve("strapiService")
 
@@ -17,7 +16,7 @@ export default async (req, res) => {
         break;
       case "productVariant":
         entryId = body.data.product_variant_id;
-        updated = await strapiService.sendStrapiProductVariantToAdmin(entryId)
+        updated = await strapiService.sendStrapiProductVariantToAdmin(body.data, entryId)
         break;
       default:
         break
