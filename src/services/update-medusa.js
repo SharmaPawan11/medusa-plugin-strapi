@@ -1,144 +1,138 @@
 import { BaseService } from "medusa-interfaces"
 import { addIgnore_, shouldIgnore_ } from "../utils/redis-key-manager"
 
-const IGNORE_THRESHOLD = 3 // seconds
-
 function isEmptyObject(obj) {
-    for (let i in obj) return false;
-    return true;
+  // eslint-disable-next-line guard-for-in
+  for (const i in obj) {
+    return false
+  }
+  return true
 }
 
 class UpdateMedusaService extends BaseService {
-    constructor(
-        {
-            productService,
-            productVariantService,
-            regionService,
-            redisClient
-        }
-    ) {
-        super();
+  constructor({
+    productService,
+    productVariantService,
+    regionService,
+    redisClient,
+  }) {
+    super()
 
-        this.productService_ = productService;
-        this.productVariantService_ = productVariantService;
-        this.redisClient_ = redisClient;
-        this.regionService_ = regionService;
+    this.productService_ = productService
+    this.productVariantService_ = productVariantService
+    this.redisClient_ = redisClient
+    this.regionService_ = regionService
+  }
+
+  async sendStrapiProductVariantToMedusa(variantEntry, variantId) {
+    const ignore = await shouldIgnore_(variantId, "medusa", this.redisClient_)
+    if (ignore) {
+      return
     }
 
-    async sendStrapiProductVariantToMedusa(variantEntry, variantId) {
-        const ignore = await shouldIgnore_(variantId, "medusa", this.redisClient_);
-        if (ignore) {
-            return;
-        }
+    try {
+      const variant = await this.productVariantService_.retrieve(variantId)
+      const update = {}
 
-        try {
-            const variant = await this.productVariantService_.retrieve(variantId);
-            let update = {};
+      if (variant.title !== variantEntry.title) {
+        update.title = variantEntry.title
+      }
 
-            if (variant.title !== variantEntry.title) {
-                update.title = variantEntry.title
-            }
+      if (!isEmptyObject(update)) {
+        const updatedVariant = await this.productVariantService_
+          .update(variantId, update)
+          .then(async () => {
+            return await addIgnore_(variantId, "strapi", this.redisClient_)
+          })
 
-            if (!isEmptyObject(update)) {
-                const updatedVariant = await this.productVariantService_
-                    .update(variantId, update)
-                    .then(async () => {
-                        return await addIgnore_(variantId, "strapi", this.redisClient_)
-                    })
+        return updatedVariant
+      }
+    } catch (error) {
+      console.log(error)
+      return false
+    }
+  }
 
-                return updatedVariant
-            }
-        } catch (error) {
-            console.log(error);
-            return false;
-        }
+  async sendStrapiProductToMedusa(productEntry, productId) {
+    const ignore = await shouldIgnore_(productId, "medusa", this.redisClient_)
+    if (ignore) {
+      return
     }
 
-    async sendStrapiProductToMedusa(productEntry, productId) {
+    try {
+      // get entry from Strapi
+      // const productEntry = null
 
-        const ignore = await shouldIgnore_(productId, "medusa", this.redisClient_);
-        if (ignore) {
-            return
-        }
+      const product = await this.productService_.retrieve(productId)
 
-        try {
-            // get entry from Strapi
-            // const productEntry = null
+      const update = {}
 
-            const product = await this.productService_.retrieve(productId);
+      // update Medusa product with Strapi product fields
+      const title = productEntry.title
+      const subtitle = productEntry.subtitle
+      const description = productEntry.description
+      const handle = productEntry.handle
 
-            let update = {}
+      if (product.title !== title) {
+        update.title = title
+      }
 
-            // update Medusa product with Strapi product fields
-            const title = productEntry.title;
-            const subtitle = productEntry.subtitle;
-            const description = productEntry.description;
-            const handle = productEntry.handle;
+      if (product.subtitle !== subtitle) {
+        update.subtitle = subtitle
+      }
 
-            if (product.title !== title) {
-                update.title = title
-            }
+      if (product.description !== description) {
+        update.description = description
+      }
 
-            if (product.subtitle !== subtitle) {
-                update.subtitle = subtitle
-            }
+      if (product.handle !== handle) {
+        update.handle = handle
+      }
 
-            if (product.description !== description) {
-                update.description = description
-            }
+      // Get the thumbnail, if present
+      if (productEntry.thumbnail) {
+        const thumb = null
+        update.thumbnail = thumb
+      }
 
-            if (product.handle !== handle) {
-                update.handle = handle
-            }
+      if (!isEmptyObject(update)) {
+        await this.productService_.update(productId, update).then(async () => {
+          return await addIgnore_(productId, "strapi", this.redisClient_)
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      return false
+    }
+  }
 
-            // Get the thumbnail, if present
-            if (productEntry.thumbnail) {
-                const thumb = null
-                update.thumbnail = thumb;
-            }
-
-            if (!isEmptyObject(update)) {
-                await this.productService_.update(productId, update).then(async () => {
-                    return await addIgnore_(productId, "strapi", this.redisClient_)
-                })
-            }
-
-        } catch (error) {
-            console.log(error);
-            return false;
-        }
+  async sendStrapiRegionToMedusa(regionEntry, regionId) {
+    const ignore = await shouldIgnore_(regionId, "medusa", this.redisClient_)
+    if (ignore) {
+      return
     }
 
-    async sendStrapiRegionToMedusa(regionEntry, regionId) {
-        const ignore = await shouldIgnore_(regionId, "medusa", this.redisClient_);
-        if (ignore) {
-            return
-        }
+    try {
+      const region = await this.regionService_.retrieve(regionId)
+      const update = {}
 
-        try {
-            const region = await this.regionService_.retrieve(regionId);
-            let update = {};
+      if (region.name !== regionEntry.name) {
+        update.name = regionEntry.name
+      }
 
-            if (region.name !== regionEntry.name) {
-                update.name = regionEntry.name;
-            }
-
-
-            if (!isEmptyObject(update)) {
-                const updatedRegion = await this.regionService_
-                    .update(regionId, update)
-                    .then(async () => {
-                        return await addIgnore_(regionId, "strapi", this.redisClient_)
-                    })
-                return updatedRegion
-            }
-        } catch (error) {
-            console.log(error);
-            return false;
-        }
+      if (!isEmptyObject(update)) {
+        const updatedRegion = await this.regionService_
+          .update(regionId, update)
+          .then(async () => {
+            return await addIgnore_(regionId, "strapi", this.redisClient_)
+          })
+        return updatedRegion
+      }
+    } catch (error) {
+      console.log(error)
+      return false
     }
-
+  }
 }
 
 export default UpdateMedusaService
-

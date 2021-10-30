@@ -8,6 +8,7 @@ yarn.lock
 
 /dist
 
+/utils
 /api
 /services
 /models

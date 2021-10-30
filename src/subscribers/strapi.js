@@ -9,7 +9,7 @@ class StrapiSubscriber {
     this.productService_ = productService
     this.strapiService_ = updateStrapiService
     this.eventBus_ = eventBusService
-    console.warn('\n Strapi Subscriber Initialized')
+    console.warn("\n Strapi Subscriber Initialized")
 
     this.eventBus_.subscribe("region.created", async (data) => {
       await this.strapiService_.createRegionInStrapi(data.id)
@@ -36,16 +36,16 @@ class StrapiSubscriber {
     })
 
     this.eventBus_.subscribe("product.deleted", async (data) => {
-      await this.strapiService_.deleteProductInStrapi(data);
+      await this.strapiService_.deleteProductInStrapi(data)
     })
 
     this.eventBus_.subscribe("product-variant.deleted", async (data) => {
-      await this.strapiService_.deleteProductVariantInStrapi(data);
+      await this.strapiService_.deleteProductVariantInStrapi(data)
     })
 
     // Blocker - Delete Region API
     this.eventBus_.subscribe("region.deleted", async (data) => {
-      await this.strapiService_.deleteRegionInStrapi(data);
+      await this.strapiService_.deleteRegionInStrapi(data)
     })
   }
 }

@@ -1,4 +1,4 @@
-import {BaseService} from "medusa-interfaces"
+import { BaseService } from "medusa-interfaces"
 import axios from "axios"
 
 const IGNORE_THRESHOLD = 3 // seconds
@@ -14,7 +14,7 @@ class UpdateStrapiService extends BaseService {
     },
     options
   ) {
-    super();
+    super()
 
     this.productService_ = productService
 
@@ -26,15 +26,15 @@ class UpdateStrapiService extends BaseService {
 
     this.options_ = options
 
-    this.strapiAuthToken = '';
+    this.strapiAuthToken = ""
 
     this.checkStrapiHealth().then((res) => {
       if (res) {
-        this.loginToStrapi();
+        this.loginToStrapi()
       }
-    });
+    })
 
-    this.redis_ = redisClient;
+    this.redis_ = redisClient
   }
 
   async addIgnore_(id, side) {
@@ -53,33 +53,33 @@ class UpdateStrapiService extends BaseService {
   }
 
   async getVariantEntries_(variants) {
+    // eslint-disable-next-line no-useless-catch
     try {
       const allVariants = variants.map(async (variant) => {
         // update product variant in strapi
-        const result = await this.updateProductVariantInStrapi(variant);
-        return result.productVariant;
+        const result = await this.updateProductVariantInStrapi(variant)
+        return result.productVariant
       })
-      return Promise.all(allVariants);
+      return Promise.all(allVariants)
     } catch (error) {
       throw error
     }
   }
 
   async createImageAssets(product) {
-    let assets;
-    assets = await Promise.all(
+    const assets = await Promise.all(
       product.images
         .filter((image) => image.url !== product.thumbnail)
         .map(async (image, i) => {
-          const result = await this.createEntryInStrapi('images', product.id, {
-          image_id: image.id,
-          url: image.url,
-          metadata: image.metadata || {}
-           });
-          return result.image;
+          const result = await this.createEntryInStrapi("images", product.id, {
+            image_id: image.id,
+            url: image.url,
+            metadata: image.metadata || {},
+          })
+          return result.image
         })
     )
-    return assets || [];
+    return assets || []
   }
 
   getCustomField(field, type) {
@@ -96,13 +96,14 @@ class UpdateStrapiService extends BaseService {
     const hasType = await this.getType("products")
       .then(() => true)
       .catch((err) => {
-        // console.log(err);
-        return false;
+        // console.log(err)
+        return false
       })
     if (!hasType) {
       return Promise.resolve()
     }
 
+    // eslint-disable-next-line no-useless-catch
     try {
       const product = await this.productService_.retrieve(productId, {
         relations: [
@@ -133,13 +134,12 @@ class UpdateStrapiService extends BaseService {
           "mid_code",
           "material",
           "metadata",
-        ]
+        ],
       })
 
       if (product) {
-        return await this.createEntryInStrapi('products', productId, product);
+        return await this.createEntryInStrapi("products", productId, product)
       }
-
     } catch (error) {
       throw error
     }
@@ -154,18 +154,19 @@ class UpdateStrapiService extends BaseService {
       return Promise.resolve()
     }
 
+    // eslint-disable-next-line no-useless-catch
     try {
       const variant = await this.productVariantService_.retrieve(variantId, {
-        relations: [
-          "prices",
-          "options",
-          "product"
-        ],
+        relations: ["prices", "options", "product"],
       })
 
-      // console.log(variant);
+      // console.log(variant)
       if (variant) {
-        return await this.createEntryInStrapi('product-variants', variantId, variant);
+        return await this.createEntryInStrapi(
+          "product-variants",
+          variantId,
+          variant
+        )
       }
     } catch (error) {
       throw error
@@ -177,19 +178,25 @@ class UpdateStrapiService extends BaseService {
       .then(() => true)
       .catch(() => false)
     if (!hasType) {
-      console.log('Type "Regions" doesnt exist in Strapi');
+      console.log('Type "Regions" doesnt exist in Strapi')
       return Promise.resolve()
     }
 
+    // eslint-disable-next-line no-useless-catch
     try {
       const region = await this.regionService_.retrieve(regionId, {
-        relations: ["countries", "payment_providers", "fulfillment_providers", "currency"],
-        select: ["id", "name", "tax_rate", "tax_code", "metadata"]
-      });
+        relations: [
+          "countries",
+          "payment_providers",
+          "fulfillment_providers",
+          "currency",
+        ],
+        select: ["id", "name", "tax_rate", "tax_code", "metadata"],
+      })
 
       // console.log(region)
 
-      return await this.createEntryInStrapi('regions', regionId, region);
+      return await this.createEntryInStrapi("regions", regionId, region)
     } catch (error) {
       throw error
     }
@@ -198,12 +205,12 @@ class UpdateStrapiService extends BaseService {
   async updateRegionInStrapi(data) {
     const hasType = await this.getType("regions")
       .then((res) => {
-        // console.log(res.data);
-        return true;
+        // console.log(res.data)
+        return true
       })
       .catch((error) => {
-        // console.log(error.response.status);
-        return false;
+        // console.log(error.response.status)
+        return false
       })
     if (!hasType) {
       return Promise.resolve()
@@ -223,6 +230,7 @@ class UpdateStrapiService extends BaseService {
       return
     }
 
+    // eslint-disable-next-line no-useless-catch
     try {
       const ignore = await this.shouldIgnore_(data.id, "strapi")
       if (ignore) {
@@ -230,18 +238,27 @@ class UpdateStrapiService extends BaseService {
       }
 
       const region = await this.regionService_.retrieve(data.id, {
-        relations: ["countries", "payment_providers", "fulfillment_providers", "currency"],
-        select: ["id", "name", "tax_rate", "tax_code", "metadata"]
-      });
-      // console.log(region);
+        relations: [
+          "countries",
+          "payment_providers",
+          "fulfillment_providers",
+          "currency",
+        ],
+        select: ["id", "name", "tax_rate", "tax_code", "metadata"],
+      })
+      // console.log(region)
 
       if (region) {
         // Update entry in Strapi
-        const response = await this.updateEntryInStrapi('regions', region.id, region);
-        console.log('Region Strapi Id - ', response);
+        const response = await this.updateEntryInStrapi(
+          "regions",
+          region.id,
+          region
+        )
+        console.log("Region Strapi Id - ", response)
       }
 
-      return region;
+      return region
     } catch (error) {
       throw error
     }
@@ -249,19 +266,19 @@ class UpdateStrapiService extends BaseService {
 
   async updateProductInStrapi(data) {
     const hasType = await this.getType("products")
-        .then((res) => {
-          // console.log(res.data);
-          return true;
-        })
-        .catch((error) => {
-          // console.log(error.response.status);
-          return false;
-        })
+      .then((res) => {
+        // console.log(res.data)
+        return true
+      })
+      .catch((error) => {
+        // console.log(error.response.status)
+        return false
+      })
     if (!hasType) {
       return Promise.resolve()
     }
 
-    // console.log(data);
+    // console.log(data)
     const updateFields = [
       "variants",
       "options",
@@ -282,10 +299,13 @@ class UpdateStrapiService extends BaseService {
       return Promise.resolve()
     }
 
+    // eslint-disable-next-line no-useless-catch
     try {
       const ignore = await this.shouldIgnore_(data.id, "strapi")
       if (ignore) {
-        console.log('Strapi has just updated this product which triggered this function. IGNORING... ')
+        console.log(
+          "Strapi has just updated this product which triggered this function. IGNORING... "
+        )
         return Promise.resolve()
       }
 
@@ -318,29 +338,28 @@ class UpdateStrapiService extends BaseService {
           "mid_code",
           "material",
           "metadata",
-        ]
-      });
+        ],
+      })
 
       if (product) {
-        const response = await this.updateEntryInStrapi('products', product.id, product);
+        await this.updateEntryInStrapi("products", product.id, product)
       }
 
-      return product;
+      return product
     } catch (error) {
       throw error
     }
   }
 
   async updateProductVariantInStrapi(data) {
-
     const hasType = await this.getType("product-variants")
       .then((res) => {
-        // console.log(res.data);
-        return true;
+        // console.log(res.data)
+        return true
       })
       .catch((error) => {
-        // console.log(error.response.status);
-        return false;
+        // console.log(error.response.status)
+        return false
       })
     if (!hasType) {
       return Promise.resolve()
@@ -376,29 +395,33 @@ class UpdateStrapiService extends BaseService {
 
       const variant = await this.productVariantService_.retrieve(data.id, {
         relations: ["prices", "options"],
-      });
-      console.log(variant);
+      })
+      console.log(variant)
 
       if (variant) {
         // Update entry in Strapi
-        const response = await this.updateEntryInStrapi('product-variants', variant.id, variant);
-        console.log('Variant Strapi Id - ', response);
+        const response = await this.updateEntryInStrapi(
+          "product-variants",
+          variant.id,
+          variant
+        )
+        console.log("Variant Strapi Id - ", response)
       }
 
-      return variant;
+      return variant
     } catch (error) {
-      console.log('Failed to update product variant', data.id);
+      console.log("Failed to update product variant", data.id)
       throw error
     }
   }
 
   async deleteProductInStrapi(data) {
     const hasType = await this.getType("products")
-        .then(() => true)
-        .catch((err) => {
-          // console.log(err);
-          return false;
-        })
+      .then(() => true)
+      .catch((err) => {
+        // console.log(err)
+        return false
+      })
     if (!hasType) {
       return Promise.resolve()
     }
@@ -408,16 +431,16 @@ class UpdateStrapiService extends BaseService {
       return Promise.resolve()
     }
 
-    return await this.deleteEntryInStrapi("products", data.id);
+    return await this.deleteEntryInStrapi("products", data.id)
   }
 
   async deleteProductVariantInStrapi(data) {
     const hasType = await this.getType("product-variants")
-        .then(() => true)
-        .catch((err) => {
-          // console.log(err);
-          return false;
-        })
+      .then(() => true)
+      .catch((err) => {
+        // console.log(err)
+        return false
+      })
     if (!hasType) {
       return Promise.resolve()
     }
@@ -427,164 +450,177 @@ class UpdateStrapiService extends BaseService {
       return Promise.resolve()
     }
 
-    return await this.deleteEntryInStrapi("product-variants", data.id);
+    return await this.deleteEntryInStrapi("product-variants", data.id)
   }
 
   // Blocker - Delete Region API
-  async deleteRegionInStrapi(data) {
-
-  }
+  async deleteRegionInStrapi(data) {}
 
   async getType(type) {
     if (!this.strapiAuthToken) {
-      await this.loginToStrapi();
+      await this.loginToStrapi()
     }
     const config = {
       url: `http://localhost:1337/${type}`,
-      method: 'get',
+      method: "get",
       headers: {
-        'Authorization': `Bearer ${this.strapiAuthToken}`
-      }
-    };
+        Authorization: `Bearer ${this.strapiAuthToken}`,
+      },
+    }
 
-    return axios(config);
+    return axios(config)
   }
 
   async checkStrapiHealth() {
     const config = {
-      method: 'head',
-      url: `http://localhost:1337/_health`
-    };
-    console.log('Checking strapi Health');
-    return axios(config).then((res) => {
-      if (res.status === 204) {
-        console.log('\n Strapi Health Check OK \n');
-      }
-      return true;
-    }).catch((error) => {
-      if (error.code === 'ECONNREFUSED') {
-        console.error('\nCould not connect to strapi. Please make sure strapi is running.\n')
-      }
-      return false;
-    })
+      method: "head",
+      url: `http://localhost:1337/_health`,
+    }
+    console.log("Checking strapi Health")
+    return axios(config)
+      .then((res) => {
+        if (res.status === 204) {
+          console.log("\n Strapi Health Check OK \n")
+        }
+        return true
+      })
+      .catch((error) => {
+        if (error.code === "ECONNREFUSED") {
+          console.error(
+            "\nCould not connect to strapi. Please make sure strapi is running.\n"
+          )
+        }
+        return false
+      })
   }
 
   async loginToStrapi() {
     const config = {
-      method: 'post',
+      method: "post",
       url: `http://localhost:1337/auth/local`,
       data: {
         identifier: this.options_.strapi_medusa_user,
-        password: this.options_.strapi_medusa_password
+        password: this.options_.strapi_medusa_password,
       },
-    };
-    return axios(config).then((res) => {
-      if (res.data.jwt) {
-        this.strapiAuthToken = res.data.jwt;
-        console.log('\n Successfully logged in to Strapi \n');
-        return true
-      }
-      return false;
-    }).catch((error) => {
-      if (error) {
-        throw new Error("\nError while trying to login to strapi\n");
-      }
-    })
+    }
+    return axios(config)
+      .then((res) => {
+        if (res.data.jwt) {
+          this.strapiAuthToken = res.data.jwt
+          console.log("\n Successfully logged in to Strapi \n")
+          return true
+        }
+        return false
+      })
+      .catch((error) => {
+        if (error) {
+          throw new Error("\nError while trying to login to strapi\n")
+        }
+      })
   }
 
   async createEntryInStrapi(type, id, data) {
     if (!this.strapiAuthToken) {
-      await this.loginToStrapi();
+      await this.loginToStrapi()
     }
     const config = {
-      method: 'post',
+      method: "post",
       url: `http://localhost:1337/${type}`,
       headers: {
-        'Authorization': `Bearer ${this.strapiAuthToken}`
+        Authorization: `Bearer ${this.strapiAuthToken}`,
       },
-      data
-    };
-    return axios(config).then((res) => {
-      if (res.data.result) {
-        this.addIgnore_(id, "medusa");
-        return res.data.data
-      }
-      return null;
-    }).catch(async (error) => {
-      if (error && error.response && error.response.status) {
-        throw new Error("Error while trying to create entry in strapi - " + type);
-      }
-    })
+      data,
+    }
+    return axios(config)
+      .then((res) => {
+        if (res.data.result) {
+          this.addIgnore_(id, "medusa")
+          return res.data.data
+        }
+        return null
+      })
+      .catch(async (error) => {
+        if (error && error.response && error.response.status) {
+          throw new Error(
+            "Error while trying to create entry in strapi - " + type
+          )
+        }
+      })
   }
 
   async updateEntryInStrapi(type, id, data) {
     if (!this.strapiAuthToken) {
-      await this.loginToStrapi();
+      await this.loginToStrapi()
     }
     const config = {
-      method: 'put',
+      method: "put",
       url: `http://localhost:1337/${type}/${id}`,
       headers: {
-        Authorization: `Bearer ${this.strapiAuthToken}`
+        Authorization: `Bearer ${this.strapiAuthToken}`,
       },
-      data
-    };
-    return axios(config).then((res) => {
-      if (res.data.result) {
-        this.addIgnore_(id, "medusa");
-        return res.data.data
-      }
-      return null;
-    }).catch(async (error) => {
-      if (error && error.response && error.response.status) {
-        throw new Error("Error while trying to update entry in strapi ");
-      }
-    })
+      data,
+    }
+    return axios(config)
+      .then((res) => {
+        if (res.data.result) {
+          this.addIgnore_(id, "medusa")
+          return res.data.data
+        }
+        return null
+      })
+      .catch(async (error) => {
+        if (error && error.response && error.response.status) {
+          throw new Error("Error while trying to update entry in strapi ")
+        }
+      })
   }
 
   async deleteEntryInStrapi(type, id) {
     if (!this.strapiAuthToken) {
-      await this.loginToStrapi();
+      await this.loginToStrapi()
     }
     const config = {
-      method: 'delete',
+      method: "delete",
       url: `http://localhost:1337/${type}/${id}`,
       headers: {
-        Authorization: `Bearer ${this.strapiAuthToken}`
+        Authorization: `Bearer ${this.strapiAuthToken}`,
       },
-    };
-    return axios(config).then((res) => {
-      if (res.data.result) {
-        return res.data.data
-      }
-      return null;
-    }).catch(async (error) => {
-      if (error && error.response && error.response.status) {
-        throw new Error("Error while trying to delete entry in strapi ");
-      }
-    })
+    }
+    return axios(config)
+      .then((res) => {
+        if (res.data.result) {
+          return res.data.data
+        }
+        return null
+      })
+      .catch(async (error) => {
+        if (error && error.response && error.response.status) {
+          throw new Error("Error while trying to delete entry in strapi ")
+        }
+      })
   }
 
   async doesEntryExistInStrapi(type, id) {
     if (!this.strapiAuthToken) {
-      await this.loginToStrapi();
+      await this.loginToStrapi()
     }
     const config = {
-      method: 'get',
+      method: "get",
       url: `http://localhost:1337/${type}/${id}`,
       headers: {
-        Authorization: `Bearer ${this.strapiAuthToken}`
-      }
-    };
+        Authorization: `Bearer ${this.strapiAuthToken}`,
+      },
+    }
 
-    return axios(config).then((res) => {
-      return true;
-    }).catch((error) => {
-      console.log(error.response.status, id);
-      throw new Error("Given entry doesn't exist in Strapi");
-    })
+    return axios(config)
+      .then((res) => {
+        return true
+      })
+      .catch((error) => {
+        console.log(error.response.status, id)
+        throw new Error("Given entry doesn't exist in Strapi")
+      })
   }
-
 }
 
 export default UpdateStrapiService

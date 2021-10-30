@@ -1,2 +1,2 @@
 // noop
-console.log('INIT INDEX.js')
+console.log("INIT INDEX.js")

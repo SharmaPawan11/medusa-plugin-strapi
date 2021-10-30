@@ -1,0 +1,7 @@
+services/
+subscribers/
+services/
+api/
+utils/
+strapi-medusa/.cache
+strapi-medusa/build
