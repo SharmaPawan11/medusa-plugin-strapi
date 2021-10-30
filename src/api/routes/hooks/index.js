@@ -8,15 +8,15 @@ export default (app) => {
   app.use("/hooks", route)
 
   route.post(
-    "/strapi",
+    "/update-medusa",
     bodyParser.json(),
-    middlewares.wrap(require("./strapi").default)
+    middlewares.wrap(require("./update-medusa").default)
   )
 
   route.post(
-      "/seed",
-      bodyParser.json(),
-      middlewares.wrap(require("./seed").default)
+    "/seed",
+    bodyParser.json(),
+    middlewares.wrap(require("./seed").default)
   )
 
   return app

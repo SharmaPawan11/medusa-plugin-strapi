@@ -10,16 +10,14 @@ const axios = require('axios');
 module.exports = {
   lifecycles: {
     async afterUpdate(result, params, data) {
-      await axios.post('http://localhost:9000/hooks/strapi', {
+      await axios.post('http://localhost:9000/hooks/update-medusa', {
         type: 'product',
         data
       }, {
         headers: {
           'Content-Type': 'application/json'
         }
-
-      })
-      // console.log(result, params, data);
+      });
     }
   }
 };

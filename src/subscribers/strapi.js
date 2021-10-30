@@ -1,13 +1,13 @@
 class StrapiSubscriber {
   constructor({
-    strapiService,
+    updateStrapiService,
     productVariantService,
     productService,
     eventBusService,
   }) {
     this.productVariantService_ = productVariantService
     this.productService_ = productService
-    this.strapiService_ = strapiService
+    this.strapiService_ = updateStrapiService
     this.eventBus_ = eventBusService
     console.warn('\n Strapi Subscriber Initialized')
 
