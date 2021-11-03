@@ -59,7 +59,7 @@
   ```
 - Make sure your packages version in `package.json` match this - 
   ``` 
-    "@medusajs/medusa": "^1.1.47",
+    "@medusajs/medusa": "^1.1.49",
     "@medusajs/medusa-cli": "^1.1.22",
     "medusa-fulfillment-manual": "^1.1.26",
     "medusa-interfaces": "^1.1.27",
@@ -112,34 +112,22 @@ This plugin assumes that you are familiar with strapi. If you have not used it b
 
 https://strapi.io/documentation/developer-docs/latest/getting-started/quick-start.html
 
-- Navigate to `strapi` directory. It is located at `backend/plugins/medusa-plugin-strapi/strapi-medusa`. The directory `strapi-medusa` is included inside plugin just for simplicity, you can host it anywhere. 
-
-
-- Install dependencies for strapi.
-  ``` 
-  npm install
+- Create a new strapi project using our template. 
   ```
-- Choose the database of your choice in `config/database.js`.
-  (`SQLite` set by default). If you want to use `postgres` instead of `SQLite`, Uncomment following lines of code -  
-  ``` 
-  client: 'postgres',
-  host: env('DATABASE_HOST', '127.0.0.1'),
-  port: env.int('DATABASE_PORT', 5432),
-  database: env('DATABASE_NAME', 'medusa'),
-  username: env('DATABASE_USERNAME', 'medusa'),
-  password: env('DATABASE_PASSWORD', 'medusa'),
-  ssl: env.bool('DATABASE_SSL', false),
-  ```
-  and comment these lines
-
-  ```
-  client: 'sqlite',
-  filename: env('DATABASE_FILENAME', '.tmp/data.db'),
+  npx create-strapi-app strapi-medusa --template https://github.com/Deathwish98/strapi-medusa-template.git
+  
+  OR
+  
+  yarn create strapi-app strapi-medusa --template https://github.com/Deathwish98/strapi-medusa-template.git
   ```
 
 - Start strapi server. 
   ``` 
-  npm run develop
+  npm run develop <---- For development purposes
+  
+  OR 
+  
+  npm run start
   ```
   NOTE: If you are using `SQLite` there is a known `knex.js` bug -
   ``` 

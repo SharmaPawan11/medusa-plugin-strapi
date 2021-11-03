@@ -44,15 +44,13 @@
     "test": "jest",
     "lint": "eslint --ext .js,.jsx,.ts,.tsx ."
   },
-  "peerDependencies": {
-    "medusa-interfaces": "1.x"
-  },
+
   "dependencies": {
     "@babel/plugin-transform-classes": "^7.9.5",
     "axios": "^0.21.1",
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
-    "medusa-core-utils": "^1.1.20",
+    "medusa-core-utils": "^1.1.26",
     "medusa-test-utils": "^1.1.23",
     "redis": "^3.0.2"
   }
