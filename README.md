@@ -114,7 +114,7 @@ https://strapi.io/documentation/developer-docs/latest/getting-started/quick-star
 
 - Create a new strapi project using our template. 
   ```
-  npx create-strapi-app strapi-medusa --template https://github.com/Deathwish98/strapi-medusa-template.git
+  npx create-strapi-app@3.6.8 strapi-medusa --template https://github.com/Deathwish98/strapi-medusa-template.git
   
   OR
   
