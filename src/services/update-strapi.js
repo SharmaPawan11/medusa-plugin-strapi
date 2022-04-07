@@ -26,6 +26,11 @@ class UpdateStrapiService extends BaseService {
 
     this.options_ = options
 
+    this.protocol = this.options_.strapi_protocol
+
+    this.strapi_URL_STRING=`${this.protocol??"https"}://${this.options_.strapi_url??"localhost"}:${this.options_.strapi_port??1337}`
+
+
     this.strapiAuthToken = ""
 
     this.checkStrapiHealth().then((res) => {
@@ -461,7 +466,7 @@ class UpdateStrapiService extends BaseService {
       await this.loginToStrapi()
     }
     const config = {
-      url: `http://localhost:1337/${type}`,
+      url: `${this.strapi_URL_STRING}/${type}`,
       method: "get",
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
@@ -474,7 +479,7 @@ class UpdateStrapiService extends BaseService {
   async checkStrapiHealth() {
     const config = {
       method: "head",
-      url: `http://localhost:1337/_health`,
+      url: `${this.strapi_URL_STRING}/_health`,
     }
     console.log("Checking strapi Health")
     return axios(config)
@@ -497,7 +502,7 @@ class UpdateStrapiService extends BaseService {
   async loginToStrapi() {
     const config = {
       method: "post",
-      url: `http://localhost:1337/auth/local`,
+      url: `${this.strapi_URL_STRING}/api/auth/local`,
       data: {
         identifier: this.options_.strapi_medusa_user,
         password: this.options_.strapi_medusa_password,
@@ -514,7 +519,7 @@ class UpdateStrapiService extends BaseService {
       })
       .catch((error) => {
         if (error) {
-          throw new Error("\nError while trying to login to strapi\n")
+          throw new Error("\nError while trying to login to strapi\n"+error)
         }
       })
   }
@@ -525,7 +530,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "post",
-      url: `http://localhost:1337/${type}`,
+      url: `${this.strapi_URL_STRING}/${type}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -554,7 +559,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "put",
-      url: `http://localhost:1337/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -581,7 +586,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "delete",
-      url: `http://localhost:1337/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -606,7 +611,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "get",
-      url: `http://localhost:1337/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
