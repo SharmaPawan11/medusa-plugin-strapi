@@ -466,7 +466,7 @@ class UpdateStrapiService extends BaseService {
       await this.loginToStrapi()
     }
     const config = {
-      url: `${this.strapi_URL_STRING}/${type}`,
+      url: `${this.strapi_URL_STRING}/api/${type}`,
       method: "get",
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
@@ -530,7 +530,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "post",
-      url: `${this.strapi_URL_STRING}/${type}`,
+      url: `${this.strapi_URL_STRING}/api/${type}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -559,7 +559,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "put",
-      url: `${this.strapi_URL_STRING}/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/api/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -586,7 +586,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "delete",
-      url: `${this.strapi_URL_STRING}/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/api/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
@@ -611,7 +611,7 @@ class UpdateStrapiService extends BaseService {
     }
     const config = {
       method: "get",
-      url: `${this.strapi_URL_STRING}/${type}/${id}`,
+      url: `${this.strapi_URL_STRING}/api/${type}/${id}`,
       headers: {
         Authorization: `Bearer ${this.strapiAuthToken}`,
       },
