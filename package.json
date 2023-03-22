@@ -10,8 +10,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/medusajs/medusa",
-    "directory": "packages/medusa-plugin-strapi"
+    "url": "https://github.com/Deathwish98/medusa-plugin-strapi"
   },
   "author": "Pawan Sharma",
   "license": "MIT",
