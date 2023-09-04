@@ -15,6 +15,8 @@ class UpdateMedusaService extends BaseService {
     productVariantService,
     regionService,
     redisClient,
+    productCategoryService,
+    productCollectionService
   }) {
     super()
 
@@ -22,6 +24,8 @@ class UpdateMedusaService extends BaseService {
     this.productVariantService_ = productVariantService
     this.redisClient_ = redisClient
     this.regionService_ = regionService
+    this.productCategoryService_ = productCategoryService
+    this.productCollectionService_ = productCollectionService
   }
 
   async sendStrapiProductVariantToMedusa(variantEntry, variantId) {
@@ -127,6 +131,76 @@ class UpdateMedusaService extends BaseService {
             return await addIgnore_(regionId, "strapi", this.redisClient_)
           })
         return updatedRegion
+      }
+    } catch (error) {
+      console.log(error)
+      return false
+    }
+  }
+
+  async sendStrapiProductCategoryToMedusa(productCategoryEntry, productCategoryId) {
+    const ignore = await shouldIgnore_(productCategoryId, "medusa", this.redisClient_)
+    if (ignore) {
+      return
+    }
+
+    try {
+      const productCategory = await this.productCategoryService_.retrieve(productCategoryId)
+
+      const update = {}
+
+      const name = productCategoryEntry.name
+      const description = productCategoryEntry.description
+      const handle = productCategoryEntry.handle
+
+      if (productCategory.name !== name) {
+        update.name = name
+      }
+
+      if (productCategory.description !== description) {
+        update.description = description
+      }
+
+      if (productCategory.handle !== handle) {
+        update.handle = handle
+      }
+
+      if (!isEmptyObject(update)) {
+        await this.productCategoryService_.update(productCategoryId, update).then(async () => {
+          return await addIgnore_(productCategoryId, "strapi", this.redisClient_)
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      return false
+    }
+  }
+
+  async sendStrapiProductCollectionToMedusa(productCollectionEntry, productCollectionId) {
+    const ignore = await shouldIgnore_(productCollectionId, "medusa", this.redisClient_)
+    if (ignore) {
+      return
+    }
+
+    try {
+      const productCollection = await this.productCollectionService_.retrieve(productCollectionId)
+
+      const update = {}
+      const title = productCollectionEntry.title
+      const handle = productCollectionEntry.handle
+
+      if (productCollection.title !== title) {
+        update.title = title
+      }
+
+      if (productCollection.handle !== handle) {
+        update.handle = handle
+      }
+
+      if (!isEmptyObject(update)) {
+        await this.productCollectionService_.update(productCollectionId, update).then(async () => {
+          return await addIgnore_(productCollectionId, "strapi", this.redisClient_)
+        })
       }
     } catch (error) {
       console.log(error)
