@@ -32,6 +32,22 @@ export default async (req, res) => {
           entryId
         )
         break
+      case "productCategory":
+        console.log("productCategory")
+        entryId = body.data.medusa_id
+        updated = await updateMedusaService.sendStrapiProductCategoryToMedusa(
+          body.data,
+          entryId
+        )
+        break
+      case "productCollection":
+        console.log("productCollection")
+        entryId = body.data.medusa_id
+        updated = await updateMedusaService.sendStrapiProductCollectionToMedusa(
+          body.data,
+          entryId
+        )
+        break
       default:
         break
     }
