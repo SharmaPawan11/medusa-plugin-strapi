@@ -76,6 +76,7 @@ class UpdateMedusaService extends BaseService {
       const subtitle = productEntry.subtitle
       const description = productEntry.description
       const handle = productEntry.handle
+      const thumbnail = productEntry.thumbnail
 
       if (product.title !== title) {
         update.title = title
@@ -93,10 +94,8 @@ class UpdateMedusaService extends BaseService {
         update.handle = handle
       }
 
-      // Get the thumbnail, if present
-      if (productEntry.thumbnail) {
-        const thumb = null
-        update.thumbnail = thumb
+      if (product.thumbnail !== thumbnail) {
+        update.thumbnail = thumbnail
       }
 
       if (!isEmptyObject(update)) {
